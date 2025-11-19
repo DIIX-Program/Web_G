@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brick Breaker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .info {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        canvas {
+            border: 3px solid #333;
+            border-radius: 10px;
+            background: #000;
+        }
+
+        .controls {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="game-container">
+        <h1>🎯 Brick Breaker</h1>
+        <div class="info">
+            <div>Điểm: <span id="score">0</span></div>
+            <div>Mạng: <span id="lives">3</span></div>
+        </div>
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <div class="controls">
+            <p>Dùng phím mũi tên trái/phải hoặc chuột để di chuyển</p>
+        </div>
+        <button onclick="resetGame()">Chơi Lại</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let paddle = { x: 250, y: 370, width: 100, height: 10 };
+        let ball = { x: 300, y: 200, radius: 8, dx: 4, dy: -4 };
+        let bricks = [];
+        let score = 0;
+        let lives = 3;
+
+        function initBricks() {
+            bricks = [];
+            for (let i = 0; i < 5; i++) {
+                for (let j = 0; j < 8; j++) {
+                    bricks.push({
+                        x: j * 75 + 5,
+                        y: i * 30 + 50,
+                        width: 70,
+                        height: 25,
+                        color: `hsl(${i * 60}, 70%, 50%)`
+                    });
+                }
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            bricks.forEach(brick => {
+                ctx.fillStyle = brick.color;
+                ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+                ctx.strokeStyle = '#fff';
+                ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
+            });
+        }
+
+        function update() {
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            if (ball.x <= ball.radius || ball.x >= canvas.width - ball.radius) {
+                ball.dx = -ball.dx;
+            }
+            if (ball.y <= ball.radius) {
+                ball.dy = -ball.dy;
+            }
+
+            if (ball.y >= canvas.height - ball.radius) {
+                lives--;
+                document.getElementById('lives').textContent = lives;
+                if (lives <= 0) {
+                    alert('Game Over! Điểm: ' + score);
+                    resetGame();
+                    return;
+                }
+                ball.x = 300;
+                ball.y = 200;
+                ball.dx = 4;
+                ball.dy = -4;
+            }
+
+            if (ball.y + ball.radius >= paddle.y &&
+                ball.x >= paddle.x &&
+                ball.x <= paddle.x + paddle.width) {
+                ball.dy = -Math.abs(ball.dy);
+                ball.dx = (ball.x - (paddle.x + paddle.width / 2)) / 10;
+            }
+
+            bricks.forEach((brick, index) => {
+                if (ball.x + ball.radius >= brick.x &&
+                    ball.x - ball.radius <= brick.x + brick.width &&
+                    ball.y + ball.radius >= brick.y &&
+                    ball.y - ball.radius <= brick.y + brick.height) {
+                    ball.dy = -ball.dy;
+                    bricks.splice(index, 1);
+                    score += 10;
+                    document.getElementById('score').textContent = score;
+                    if (bricks.length === 0) {
+                        alert('Chúc mừng! Bạn đã phá hết gạch!');
+                        resetGame();
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' && paddle.x > 0) {
+                paddle.x -= 20;
+            }
+            if (e.key === 'ArrowRight' && paddle.x < canvas.width - paddle.width) {
+                paddle.x += 20;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            paddle.x = e.clientX - rect.left - paddle.width / 2;
+            if (paddle.x < 0) paddle.x = 0;
+            if (paddle.x > canvas.width - paddle.width) paddle.x = canvas.width - paddle.width;
+        });
+
+        function resetGame() {
+            paddle = { x: 250, y: 370, width: 100, height: 10 };
+            ball = { x: 300, y: 200, radius: 8, dx: 4, dy: -4 };
+            score = 0;
+            lives = 3;
+            document.getElementById('score').textContent = 0;
+            document.getElementById('lives').textContent = 3;
+            initBricks();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+        }
+
+        initBricks();
+        setInterval(gameLoop, 16);
+    </script>
+</body>
+
+</html>

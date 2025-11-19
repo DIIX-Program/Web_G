@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 20px; }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(9, 40px);
+            gap: 0;
+            border: 3px solid #333;
+            margin: 20px auto;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            background: white;
+        }
+        .cell.fixed { background: #f0f0f0; color: #333; }
+        .cell.selected { background: #dbeafe; }
+        .cell.error { background: #fee2e2; color: #dc2626; }
+        .cell:nth-child(3n) { border-right: 2px solid #333; }
+        .cell:nth-child(n+19):nth-child(-n+27),
+        .cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid #333; }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .number-btn {
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid #333;
+            border-radius: 5px;
+            cursor: pointer;
+            background: white;
+        }
+        .number-btn:hover { background: #f3f4f6; }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #5568d3; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🔢 Sudoku</h1>
+        <div class="board" id="board"></div>
+        <div class="controls">
+            <button class="number-btn" onclick="selectNumber(1)">1</button>
+            <button class="number-btn" onclick="selectNumber(2)">2</button>
+            <button class="number-btn" onclick="selectNumber(3)">3</button>
+            <button class="number-btn" onclick="selectNumber(4)">4</button>
+            <button class="number-btn" onclick="selectNumber(5)">5</button>
+            <button class="number-btn" onclick="selectNumber(6)">6</button>
+            <button class="number-btn" onclick="selectNumber(7)">7</button>
+            <button class="number-btn" onclick="selectNumber(8)">8</button>
+            <button class="number-btn" onclick="selectNumber(9)">9</button>
+            <button class="number-btn" onclick="selectNumber(0)">X</button>
+        </div>
+        <div>
+            <button onclick="resetGame()">Game Mới</button>
+            <button onclick="checkSolution()">Kiểm Tra</button>
+        </div>
+    </div>
+    <script>
+        let board = Array(9).fill().map(() => Array(9).fill(0));
+        let fixed = Array(9).fill().map(() => Array(9).fill(false));
+        let selectedCell = null;
+        let selectedNumber = null;
+
+        function initGame() {
+            generatePuzzle();
+            render();
+        }
+
+        function generatePuzzle() {
+            board = Array(9).fill().map(() => Array(9).fill(0));
+            fixed = Array(9).fill().map(() => Array(9).fill(false));
+            solveSudoku(board);
+            removeNumbers(40);
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (board[i][j] !== 0) fixed[i][j] = true;
+                }
+            }
+        }
+
+        function solveSudoku(board) {
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (board[i][j] === 0) {
+                        const nums = [1,2,3,4,5,6,7,8,9].sort(() => Math.random() - 0.5);
+                        for (let num of nums) {
+                            if (isValid(board, i, j, num)) {
+                                board[i][j] = num;
+                                if (solveSudoku(board)) return true;
+                                board[i][j] = 0;
+                            }
+                        }
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function removeNumbers(count) {
+            let removed = 0;
+            while (removed < count) {
+                const i = Math.floor(Math.random() * 9);
+                const j = Math.floor(Math.random() * 9);
+                if (board[i][j] !== 0) {
+                    board[i][j] = 0;
+                    removed++;
+                }
+            }
+        }
+
+        function isValid(board, row, col, num) {
+            for (let i = 0; i < 9; i++) {
+                if (board[row][i] === num || board[i][col] === num) return false;
+            }
+            const startRow = Math.floor(row / 3) * 3;
+            const startCol = Math.floor(col / 3) * 3;
+            for (let i = 0; i < 3; i++) {
+                for (let j = 0; j < 3; j++) {
+                    if (board[startRow + i][startCol + j] === num) return false;
+                }
+            }
+            return true;
+        }
+
+        function render() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (fixed[i][j]) cell.classList.add('fixed');
+                    if (board[i][j] !== 0) cell.textContent = board[i][j];
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.onclick = () => {
+                        if (!fixed[i][j]) {
+                            document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
+                            cell.classList.add('selected');
+                            selectedCell = {row: i, col: j};
+                            if (selectedNumber !== null) {
+                                board[i][j] = selectedNumber;
+                                render();
+                            }
+                        }
+                    };
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function selectNumber(num) {
+            selectedNumber = num === 0 ? null : num;
+            if (selectedCell && selectedNumber !== null) {
+                if (!fixed[selectedCell.row][selectedCell.col]) {
+                    board[selectedCell.row][selectedCell.col] = selectedNumber;
+                    render();
+                }
+            }
+        }
+
+        function checkSolution() {
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (board[i][j] === 0) {
+                        alert('Chưa hoàn thành!');
+                        return;
+                    }
+                }
+            }
+            alert('Chúc mừng! Bạn đã giải xong Sudoku!');
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
+

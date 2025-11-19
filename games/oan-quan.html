@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ô Ăn Quan</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 20px; }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(5, 60px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            background: #f0f0f0;
+            border: 2px solid #333;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .cell:hover { background: #e0e0e0; transform: scale(1.1); }
+        .cell.active { background: #ffd700; }
+        .info { margin: 20px 0; font-size: 18px; }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #5568d3; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎮 Ô Ăn Quan</h1>
+        <div class="info">
+            <p>Điểm: <span id="score">0</span></p>
+            <p>Lượt: <span id="turn">1</span></p>
+        </div>
+        <div class="board" id="board"></div>
+        <button onclick="resetGame()">Chơi Lại</button>
+    </div>
+    <script>
+        let board = [5,5,5,5,5,5,5,5,5,5];
+        let score = 0;
+        let turn = 1;
+        let selectedCell = null;
+
+        function initGame() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            board.forEach((stones, index) => {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.textContent = stones;
+                cell.onclick = () => selectCell(index);
+                boardEl.appendChild(cell);
+            });
+            updateInfo();
+        }
+
+        function selectCell(index) {
+            if (board[index] === 0) return;
+            selectedCell = index;
+            document.querySelectorAll('.cell').forEach((c, i) => {
+                c.classList.toggle('active', i === index);
+            });
+            distributeStones(index);
+        }
+
+        function distributeStones(index) {
+            let stones = board[index];
+            board[index] = 0;
+            let pos = index;
+            while (stones > 0) {
+                pos = (pos + 1) % 10;
+                board[pos]++;
+                stones--;
+            }
+            if (board[pos] > 1 && board[pos] <= 3) {
+                score += board[pos];
+                board[pos] = 0;
+            }
+            turn++;
+            setTimeout(() => {
+                initGame();
+                if (turn > 20) {
+                    alert('Game kết thúc! Điểm: ' + score);
+                    resetGame();
+                }
+            }, 500);
+        }
+
+        function resetGame() {
+            board = [5,5,5,5,5,5,5,5,5,5];
+            score = 0;
+            turn = 1;
+            selectedCell = null;
+            initGame();
+        }
+
+        function updateInfo() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('turn').textContent = turn;
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
+

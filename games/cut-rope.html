@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cut the Rope</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 15px; }
+        .info {
+            margin: 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        canvas {
+            border: 3px solid #333;
+            border-radius: 10px;
+            background: #f0f0f0;
+        }
+        .controls {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #11998e;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0d7a6f; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>✂️ Cut the Rope</h1>
+        <div class="info">
+            <div>Điểm: <span id="score">0</span></div>
+            <div>Mục tiêu: <span id="target">🍭</span></div>
+        </div>
+        <canvas id="gameCanvas" width="500" height="400"></canvas>
+        <div class="controls">
+            <p>Click vào dây để cắt, đưa kẹo vào miệng quái vật</p>
+        </div>
+        <button onclick="resetGame()">Chơi Lại</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let candy = { x: 100, y: 50, vx: 0, vy: 0, radius: 15 };
+        let anchor = { x: 250, y: 50 };
+        let rope = [];
+        let monster = { x: 400, y: 350, mouth: 30 };
+        let score = 0;
+        let ropeCut = false;
+
+        function initGame() {
+            candy = { x: 100, y: 50, vx: 0, vy: 0, radius: 15 };
+            anchor = { x: 250, y: 50 };
+            rope = [];
+            for (let i = 0; i < 20; i++) {
+                rope.push({ x: anchor.x, y: anchor.y + i * 10 });
+            }
+            ropeCut = false;
+            render();
+        }
+
+        function draw() {
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!ropeCut) {
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(anchor.x, anchor.y);
+                rope.forEach((point, i) => {
+                    if (i === 0) {
+                        ctx.lineTo(point.x, point.y);
+                    } else {
+                        ctx.lineTo(point.x, point.y);
+                    }
+                });
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#ff6b6b';
+            ctx.beginPath();
+            ctx.arc(candy.x, candy.y, candy.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#2ecc71';
+            ctx.beginPath();
+            ctx.arc(monster.x, monster.y, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(monster.x - 10, monster.y - 5, 5, 0, Math.PI * 2);
+            ctx.arc(monster.x + 10, monster.y - 5, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(monster.x, monster.y + 10, monster.mouth, 0, Math.PI);
+            ctx.fill();
+        }
+
+        function update() {
+            if (!ropeCut) {
+                candy.vy += 0.3;
+                candy.y += candy.vy;
+                if (candy.y > canvas.height - candy.radius) {
+                    candy.y = canvas.height - candy.radius;
+                    candy.vy *= -0.7;
+                }
+            } else {
+                candy.vy += 0.3;
+                candy.x += candy.vx;
+                candy.y += candy.vy;
+                if (candy.y > canvas.height - candy.radius) {
+                    candy.y = canvas.height - candy.radius;
+                    candy.vy *= -0.7;
+                }
+            }
+
+            const dist = Math.sqrt(Math.pow(candy.x - monster.x, 2) + Math.pow(candy.y - monster.y, 2));
+            if (dist < monster.mouth + candy.radius) {
+                score += 100;
+                document.getElementById('score').textContent = score;
+                initGame();
+            }
+        }
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            rope.forEach((point, i) => {
+                const dist = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
+                if (dist < 10) {
+                    ropeCut = true;
+                    candy.vx = (x - candy.x) * 0.1;
+                    candy.vy = (y - candy.y) * 0.1;
+                }
+            });
+        });
+
+        function render() {
+            update();
+            draw();
+        }
+
+        function resetGame() {
+            score = 0;
+            document.getElementById('score').textContent = 0;
+            initGame();
+        }
+
+        setInterval(render, 16);
+        initGame();
+    </script>
+</body>
+</html>
+

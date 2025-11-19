@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bắn Bóng</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 15px; }
+        .info {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        canvas {
+            border: 3px solid #333;
+            border-radius: 10px;
+            background: #000;
+        }
+        .controls {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #5568d3; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎯 Bắn Bóng</h1>
+        <div class="info">
+            <div>Điểm: <span id="score">0</span></div>
+            <div>Bóng: <span id="balls">10</span></div>
+        </div>
+        <canvas id="gameCanvas" width="600" height="500"></canvas>
+        <div class="controls">
+            <p>Click chuột để bắn, mục tiêu: bắn 3 bóng cùng màu liền kề</p>
+        </div>
+        <button onclick="resetGame()">Chơi Lại</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff'];
+        let bubbles = [];
+        let shooter = { x: 300, y: 450, angle: -Math.PI / 2 };
+        let nextBall = null;
+        let score = 0;
+        let balls = 10;
+
+        function initGame() {
+            bubbles = [];
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 6; j++) {
+                    bubbles.push({
+                        x: 50 + j * 80,
+                        y: 50 + i * 50,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        radius: 25
+                    });
+                }
+            }
+            nextBall = {
+                color: colors[Math.floor(Math.random() * colors.length)],
+                radius: 25
+            };
+            render();
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            bubbles.forEach(bubble => {
+                ctx.fillStyle = bubble.color;
+                ctx.beginPath();
+                ctx.arc(bubble.x, bubble.y, bubble.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(shooter.x, shooter.y);
+            ctx.lineTo(shooter.x + Math.cos(shooter.angle) * 50, shooter.y + Math.sin(shooter.angle) * 50);
+            ctx.stroke();
+
+            if (nextBall) {
+                ctx.fillStyle = nextBall.color;
+                ctx.beginPath();
+                ctx.arc(shooter.x, shooter.y, nextBall.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            shooter.angle = Math.atan2(mouseY - shooter.y, mouseX - shooter.x);
+        });
+
+        canvas.addEventListener('click', () => {
+            if (balls <= 0) return;
+            const ball = {
+                x: shooter.x,
+                y: shooter.y,
+                vx: Math.cos(shooter.angle) * 5,
+                vy: Math.sin(shooter.angle) * 5,
+                color: nextBall.color,
+                radius: nextBall.radius
+            };
+            let active = true;
+            const animate = () => {
+                if (!active) return;
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+                if (ball.x < ball.radius || ball.x > canvas.width - ball.radius) ball.vx = -ball.vx;
+                if (ball.y < ball.radius) {
+                    active = false;
+                    bubbles.push({ x: ball.x, y: ball.y, color: ball.color, radius: ball.radius });
+                    balls--;
+                    document.getElementById('balls').textContent = balls;
+                    nextBall = { color: colors[Math.floor(Math.random() * colors.length)], radius: 25 };
+                    if (balls <= 0) {
+                        setTimeout(() => alert('Game Over! Điểm: ' + score), 500);
+                    }
+                    return;
+                }
+                bubbles.forEach((bubble, i) => {
+                    const dx = ball.x - bubble.x;
+                    const dy = ball.y - bubble.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < ball.radius + bubble.radius) {
+                        active = false;
+                        bubbles.push({ x: bubble.x, y: bubble.y, color: ball.color, radius: ball.radius });
+                        checkMatches();
+                        balls--;
+                        document.getElementById('balls').textContent = balls;
+                        nextBall = { color: colors[Math.floor(Math.random() * colors.length)], radius: 25 };
+                        if (balls <= 0) {
+                            setTimeout(() => alert('Game Over! Điểm: ' + score), 500);
+                        }
+                    }
+                });
+                if (active) requestAnimationFrame(animate);
+            };
+            animate();
+        });
+
+        function checkMatches() {
+            let changed = true;
+            while (changed) {
+                changed = false;
+                const toRemove = new Set();
+                bubbles.forEach((bubble, i) => {
+                    const sameColor = bubbles.filter(b => b.color === bubble.color);
+                    const group = [bubble];
+                    sameColor.forEach(b => {
+                        const dist = Math.sqrt(Math.pow(b.x - bubble.x, 2) + Math.pow(b.y - bubble.y, 2));
+                        if (dist < 60 && !group.includes(b)) group.push(b);
+                    });
+                    if (group.length >= 3) {
+                        group.forEach(g => toRemove.add(bubbles.indexOf(g)));
+                        changed = true;
+                        score += group.length * 10;
+                        document.getElementById('score').textContent = score;
+                    }
+                });
+                bubbles = bubbles.filter((_, i) => !toRemove.has(i));
+            }
+        }
+
+        function render() {
+            draw();
+        }
+
+        function resetGame() {
+            score = 0;
+            balls = 10;
+            document.getElementById('score').textContent = 0;
+            document.getElementById('balls').textContent = 10;
+            initGame();
+        }
+
+        setInterval(render, 16);
+        initGame();
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penalty Kick</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 15px; }
+        .info {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        canvas {
+            border: 3px solid #333;
+            border-radius: 10px;
+            background: #87CEEB;
+        }
+        .controls {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #11998e;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0d7a6f; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>⚽ Penalty Kick</h1>
+        <div class="info">
+            <div>Điểm: <span id="score">0</span></div>
+            <div>Lần: <span id="kicks">0</span></div>
+        </div>
+        <canvas id="gameCanvas" width="600" height="400"></canvas>
+        <div class="controls">
+            <p>Click vào khung thành để sút bóng</p>
+        </div>
+        <button onclick="resetGame()">Chơi Lại</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let ball = { x: 300, y: 350, vx: 0, vy: 0, radius: 15 };
+        let goalKeeper = { x: 250, y: 100, width: 100, height: 40, moving: false };
+        let score = 0;
+        let kicks = 0;
+        let ballMoving = false;
+
+        function draw() {
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(150, 50, 300, 150);
+
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(goalKeeper.x, goalKeeper.y, goalKeeper.width, goalKeeper.height);
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function update() {
+            if (ballMoving) {
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+                ball.vy += 0.3;
+
+                if (ball.y > canvas.height - 50 - ball.radius) {
+                    ball.y = canvas.height - 50 - ball.radius;
+                    ball.vy *= -0.7;
+                    ball.vx *= 0.9;
+                }
+
+                if (ball.x < ball.radius || ball.x > canvas.width - ball.radius) {
+                    ball.vx *= -0.8;
+                }
+
+                if (ball.x < goalKeeper.x + goalKeeper.width && ball.x + ball.radius > goalKeeper.x &&
+                    ball.y < goalKeeper.y + goalKeeper.height && ball.y + ball.radius > goalKeeper.y) {
+                    ball.vx *= -0.5;
+                    ball.vy *= -0.5;
+                }
+
+                if (ball.y < 50 && ball.x > 150 && ball.x < 450) {
+                    score += 10;
+                    document.getElementById('score').textContent = score;
+                    setTimeout(() => {
+                        resetBall();
+                    }, 1000);
+                }
+
+                if (ball.y < 0 || ball.y > canvas.height) {
+                    setTimeout(() => {
+                        resetBall();
+                    }, 1000);
+                }
+            }
+
+            if (!goalKeeper.moving && !ballMoving) {
+                goalKeeper.moving = true;
+                const targetX = Math.random() * 200 + 150;
+                const animate = () => {
+                    if (goalKeeper.x < targetX) goalKeeper.x += 2;
+                    if (goalKeeper.x > targetX) goalKeeper.x -= 2;
+                    if (Math.abs(goalKeeper.x - targetX) < 2) {
+                        goalKeeper.moving = false;
+                    } else {
+                        requestAnimationFrame(animate);
+                    }
+                };
+                animate();
+            }
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (ballMoving) return;
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            if (clickY < 200 && clickX > 150 && clickX < 450) {
+                const dx = clickX - ball.x;
+                const dy = clickY - ball.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                ball.vx = (dx / dist) * 8;
+                ball.vy = (dy / dist) * 8;
+                ballMoving = true;
+                kicks++;
+                document.getElementById('kicks').textContent = kicks;
+            }
+        });
+
+        function resetBall() {
+            ball = { x: 300, y: 350, vx: 0, vy: 0, radius: 15 };
+            ballMoving = false;
+        }
+
+        function resetGame() {
+            score = 0;
+            kicks = 0;
+            goalKeeper = { x: 250, y: 100, width: 100, height: 40, moving: false };
+            document.getElementById('score').textContent = 0;
+            document.getElementById('kicks').textContent = 0;
+            resetBall();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+        }
+
+        setInterval(gameLoop, 16);
+        draw();
+    </script>
+</body>
+</html>
+

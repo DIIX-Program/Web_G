@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 20px; }
+        .info {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(4, 80px);
+            gap: 10px;
+            background: #bbada0;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 20px auto;
+        }
+        .cell {
+            width: 80px;
+            height: 80px;
+            background: #eee4da;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #776e65;
+        }
+        .cell.tile-2 { background: #eee4da; }
+        .cell.tile-4 { background: #ede0c8; }
+        .cell.tile-8 { background: #f2b179; color: white; }
+        .cell.tile-16 { background: #f59563; color: white; }
+        .cell.tile-32 { background: #f67c5f; color: white; }
+        .cell.tile-64 { background: #f65e3b; color: white; }
+        .cell.tile-128 { background: #edcf72; color: white; font-size: 28px; }
+        .cell.tile-256 { background: #edcc61; color: white; font-size: 28px; }
+        .cell.tile-512 { background: #edc850; color: white; font-size: 28px; }
+        .cell.tile-1024 { background: #edc53f; color: white; font-size: 24px; }
+        .cell.tile-2048 { background: #edc22e; color: white; font-size: 24px; }
+        .controls {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #5568d3; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🔢 2048</h1>
+        <div class="info">
+            <div>Điểm: <span id="score">0</span></div>
+            <div>Mục tiêu: 2048</div>
+        </div>
+        <div class="board" id="board"></div>
+        <div class="controls">
+            <p>Dùng phím mũi tên để di chuyển</p>
+        </div>
+        <button onclick="resetGame()">Chơi Lại</button>
+    </div>
+    <script>
+        let board = [
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0]
+        ];
+        let score = 0;
+
+        function initGame() {
+            addRandomTile();
+            addRandomTile();
+            render();
+        }
+
+        function addRandomTile() {
+            const emptyCells = [];
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    if (board[i][j] === 0) {
+                        emptyCells.push({row: i, col: j});
+                    }
+                }
+            }
+            if (emptyCells.length > 0) {
+                const cell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                board[cell.row][cell.col] = Math.random() < 0.9 ? 2 : 4;
+            }
+        }
+
+        function render() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if (board[i][j] !== 0) {
+                        cell.textContent = board[i][j];
+                        cell.classList.add(`tile-${board[i][j]}`);
+                    }
+                    boardEl.appendChild(cell);
+                }
+            }
+            document.getElementById('score').textContent = score;
+        }
+
+        function move(direction) {
+            let moved = false;
+            const oldBoard = board.map(row => [...row]);
+
+            if (direction === 'left') {
+                for (let i = 0; i < 4; i++) {
+                    const row = board[i].filter(x => x !== 0);
+                    for (let j = 0; j < row.length - 1; j++) {
+                        if (row[j] === row[j + 1]) {
+                            row[j] *= 2;
+                            score += row[j];
+                            row[j + 1] = 0;
+                        }
+                    }
+                    board[i] = row.filter(x => x !== 0).concat([0,0,0,0]).slice(0, 4);
+                }
+            } else if (direction === 'right') {
+                for (let i = 0; i < 4; i++) {
+                    const row = board[i].filter(x => x !== 0);
+                    for (let j = row.length - 1; j > 0; j--) {
+                        if (row[j] === row[j - 1]) {
+                            row[j] *= 2;
+                            score += row[j];
+                            row[j - 1] = 0;
+                        }
+                    }
+                    const newRow = row.filter(x => x !== 0);
+                    board[i] = [0,0,0,0].concat(newRow).slice(-4);
+                }
+            } else if (direction === 'up') {
+                for (let j = 0; j < 4; j++) {
+                    const col = [];
+                    for (let i = 0; i < 4; i++) {
+                        if (board[i][j] !== 0) col.push(board[i][j]);
+                    }
+                    for (let i = 0; i < col.length - 1; i++) {
+                        if (col[i] === col[i + 1]) {
+                            col[i] *= 2;
+                            score += col[i];
+                            col[i + 1] = 0;
+                        }
+                    }
+                    const newCol = col.filter(x => x !== 0);
+                    for (let i = 0; i < 4; i++) {
+                        board[i][j] = i < newCol.length ? newCol[i] : 0;
+                    }
+                }
+            } else if (direction === 'down') {
+                for (let j = 0; j < 4; j++) {
+                    const col = [];
+                    for (let i = 0; i < 4; i++) {
+                        if (board[i][j] !== 0) col.push(board[i][j]);
+                    }
+                    for (let i = col.length - 1; i > 0; i--) {
+                        if (col[i] === col[i - 1]) {
+                            col[i] *= 2;
+                            score += col[i];
+                            col[i - 1] = 0;
+                        }
+                    }
+                    const newCol = col.filter(x => x !== 0);
+                    for (let i = 0; i < 4; i++) {
+                        board[i][j] = i >= 4 - newCol.length ? newCol[i - (4 - newCol.length)] : 0;
+                    }
+                }
+            }
+
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    if (oldBoard[i][j] !== board[i][j]) {
+                        moved = true;
+                        break;
+                    }
+                }
+            }
+
+            if (moved) {
+                addRandomTile();
+                render();
+                checkWin();
+            }
+        }
+
+        function checkWin() {
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 4; j++) {
+                    if (board[i][j] === 2048) {
+                        alert('Chúc mừng! Bạn đã đạt 2048!');
+                    }
+                }
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') move('left');
+            if (e.key === 'ArrowRight') move('right');
+            if (e.key === 'ArrowUp') move('up');
+            if (e.key === 'ArrowDown') move('down');
+        });
+
+        function resetGame() {
+            board = [
+                [0,0,0,0],
+                [0,0,0,0],
+                [0,0,0,0],
+                [0,0,0,0]
+            ];
+            score = 0;
+            initGame();
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
+

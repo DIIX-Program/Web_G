@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cờ Tướng</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #c94b4b 0%, #4b134f 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 { text-align: center; color: #333; margin-bottom: 15px; }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(9, 40px);
+            gap: 0;
+            border: 3px solid #333;
+            margin: 0 auto;
+            background: #f0d9b5;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            position: relative;
+        }
+        .cell.selected { background: #ffd700 !important; }
+        .river { background: #87ceeb !important; }
+        .info { text-align: center; margin: 15px 0; font-size: 16px; }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #c94b4b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #b03a3a; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>將 Cờ Tướng</h1>
+        <div class="info">
+            <p>Lượt: <span id="turn">Đỏ</span></p>
+        </div>
+        <div class="board" id="board"></div>
+        <div style="text-align: center; margin-top: 15px;">
+            <button onclick="resetGame()">Chơi Lại</button>
+        </div>
+    </div>
+    <script>
+        const pieces = {
+            'r': '車', 'h': '馬', 'e': '相', 'a': '仕', 'k': '將', 'c': '砲', 'p': '兵',
+            'R': '車', 'H': '馬', 'E': '象', 'A': '士', 'K': '帥', 'C': '炮', 'P': '卒'
+        };
+        let board = [
+            ['r','h','e','a','k','a','e','h','r'],
+            ['','','','','','','','',''],
+            ['','c','','','','','','c',''],
+            ['p','','p','','p','','p','','p'],
+            ['','','','','','','','',''],
+            ['','','','','','','','',''],
+            ['P','','P','','P','','P','','P'],
+            ['','C','','','','','','C',''],
+            ['','','','','','','','',''],
+            ['R','H','E','A','K','A','E','H','R']
+        ];
+        let selected = null;
+        let turn = 'red';
+
+        function initGame() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    if ((i >= 4 && i <= 5)) cell.classList.add('river');
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    if (board[i][j]) {
+                        cell.textContent = pieces[board[i][j]];
+                    }
+                    cell.onclick = () => handleClick(i, j);
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function handleClick(row, col) {
+            const piece = board[row][col];
+            if (selected) {
+                if (selected.row === row && selected.col === col) {
+                    selected = null;
+                    initGame();
+                    return;
+                }
+                if (canMove(selected.row, selected.col, row, col)) {
+                    board[row][col] = board[selected.row][selected.col];
+                    board[selected.row][selected.col] = '';
+                    turn = turn === 'red' ? 'black' : 'red';
+                    selected = null;
+                    document.getElementById('turn').textContent = turn === 'red' ? 'Đỏ' : 'Đen';
+                }
+            } else if (piece && ((turn === 'red' && piece === piece.toUpperCase()) || 
+                                 (turn === 'black' && piece === piece.toLowerCase()))) {
+                selected = {row, col};
+            }
+            initGame();
+            if (selected) {
+                document.querySelector(`[data-row="${selected.row}"][data-col="${selected.col}"]`).classList.add('selected');
+            }
+        }
+
+        function canMove(fromRow, fromCol, toRow, toCol) {
+            return true;
+        }
+
+        function resetGame() {
+            board = [
+                ['r','h','e','a','k','a','e','h','r'],
+                ['','','','','','','','',''],
+                ['','c','','','','','','c',''],
+                ['p','','p','','p','','p','','p'],
+                ['','','','','','','','',''],
+                ['','','','','','','','',''],
+                ['P','','P','','P','','P','','P'],
+                ['','C','','','','','','C',''],
+                ['','','','','','','','',''],
+                ['R','H','E','A','K','A','E','H','R']
+            ];
+            selected = null;
+            turn = 'red';
+            document.getElementById('turn').textContent = 'Đỏ';
+            initGame();
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
+

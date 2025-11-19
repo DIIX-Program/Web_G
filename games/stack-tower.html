@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stack Tower</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 15px; }
+        .info {
+            margin: 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        canvas {
+            border: 3px solid #333;
+            border-radius: 10px;
+            background: #f0f0f0;
+        }
+        .controls {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #5568d3; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>📚 Stack Tower</h1>
+        <div class="info">
+            <div>Điểm: <span id="score">0</span></div>
+            <div>Tầng: <span id="level">1</span></div>
+        </div>
+        <canvas id="gameCanvas" width="400" height="500"></canvas>
+        <div class="controls">
+            <p>Nhấn SPACE để dừng khối và xếp chồng</p>
+        </div>
+        <button onclick="resetGame()">Chơi Lại</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let tower = [{ x: 150, width: 100, height: 20 }];
+        let currentBlock = { x: 150, width: 100, y: 0, speed: 2, direction: 1 };
+        let score = 0;
+        let level = 1;
+        let gameOver = false;
+
+        function draw() {
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            tower.forEach((block, i) => {
+                ctx.fillStyle = `hsl(${i * 30}, 70%, 50%)`;
+                ctx.fillRect(block.x, canvas.height - (i + 1) * 20 - 20, block.width, block.height);
+            });
+
+            if (!gameOver) {
+                ctx.fillStyle = '#667eea';
+                ctx.fillRect(currentBlock.x, currentBlock.y, currentBlock.width, 20);
+            }
+        }
+
+        function update() {
+            if (gameOver) return;
+            currentBlock.x += currentBlock.speed * currentBlock.direction;
+            if (currentBlock.x <= 0 || currentBlock.x + currentBlock.width >= canvas.width) {
+                currentBlock.direction *= -1;
+            }
+            currentBlock.y += 1;
+            if (currentBlock.y >= canvas.height - tower.length * 20 - 20) {
+                placeBlock();
+            }
+        }
+
+        function placeBlock() {
+            const lastBlock = tower[tower.length - 1];
+            if (currentBlock.x + currentBlock.width < lastBlock.x || currentBlock.x > lastBlock.x + lastBlock.width) {
+                gameOver = true;
+                alert('Game Over! Điểm: ' + score);
+                return;
+            }
+            const overlapLeft = Math.max(currentBlock.x, lastBlock.x);
+            const overlapRight = Math.min(currentBlock.x + currentBlock.width, lastBlock.x + lastBlock.width);
+            const newWidth = overlapRight - overlapLeft;
+            tower.push({ x: overlapLeft, width: newWidth, height: 20 });
+            score += 10;
+            level = Math.floor(tower.length / 5) + 1;
+            currentBlock.speed += 0.2;
+            currentBlock = { x: 150, width: newWidth, y: 0, speed: currentBlock.speed, direction: 1 };
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' && !gameOver) {
+                e.preventDefault();
+                placeBlock();
+            }
+        });
+
+        function resetGame() {
+            tower = [{ x: 150, width: 100, height: 20 }];
+            currentBlock = { x: 150, width: 100, y: 0, speed: 2, direction: 1 };
+            score = 0;
+            level = 1;
+            gameOver = false;
+            document.getElementById('score').textContent = 0;
+            document.getElementById('level').textContent = 1;
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+        }
+
+        setInterval(gameLoop, 16);
+        draw();
+    </script>
+</body>
+</html>
+

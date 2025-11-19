@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dino Run</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #87CEEB 0%, #98D8C8 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 15px; }
+        .info {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        canvas {
+            border: 3px solid #333;
+            border-radius: 10px;
+            background: #f0f0f0;
+        }
+        .controls {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #87CEEB;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #6bb3d3; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🦖 Dino Run</h1>
+        <div class="info">
+            <div>Điểm: <span id="score">0</span></div>
+            <div>Tốc độ: <span id="speed">1</span>x</div>
+        </div>
+        <canvas id="gameCanvas" width="600" height="200"></canvas>
+        <div class="controls">
+            <p>Nhấn SPACE hoặc mũi tên lên để nhảy</p>
+        </div>
+        <button onclick="resetGame()">Chơi Lại</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let dino = { x: 50, y: 150, width: 30, height: 50, vy: 0, onGround: true };
+        let obstacles = [];
+        let score = 0;
+        let speed = 1;
+        let gameOver = false;
+
+        function draw() {
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+
+            ctx.fillStyle = '#333';
+            ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+
+            obstacles.forEach(obs => {
+                ctx.fillStyle = '#c0392b';
+                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+            });
+        }
+
+        function update() {
+            if (gameOver) return;
+            dino.vy += 0.8;
+            dino.y += dino.vy;
+            if (dino.y >= canvas.height - 20 - dino.height) {
+                dino.y = canvas.height - 20 - dino.height;
+                dino.vy = 0;
+                dino.onGround = true;
+            } else {
+                dino.onGround = false;
+            }
+
+            if (Math.random() < 0.01 * speed) {
+                obstacles.push({ x: canvas.width, y: canvas.height - 20 - 30, width: 20, height: 30 });
+            }
+
+            obstacles.forEach((obs, i) => {
+                obs.x -= 5 * speed;
+                if (obs.x + obs.width < 0) {
+                    obstacles.splice(i, 1);
+                    score += 10;
+                    document.getElementById('score').textContent = score;
+                    speed = Math.min(3, 1 + score / 500);
+                    document.getElementById('speed').textContent = speed.toFixed(1);
+                }
+                if (dino.x < obs.x + obs.width && dino.x + dino.width > obs.x &&
+                    dino.y < obs.y + obs.height && dino.y + dino.height > obs.y) {
+                    gameOver = true;
+                    alert('Game Over! Điểm: ' + score);
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === ' ' || e.key === 'ArrowUp') && dino.onGround && !gameOver) {
+                dino.vy = -15;
+                dino.onGround = false;
+            }
+        });
+
+        function resetGame() {
+            dino = { x: 50, y: 150, width: 30, height: 50, vy: 0, onGround: true };
+            obstacles = [];
+            score = 0;
+            speed = 1;
+            gameOver = false;
+            document.getElementById('score').textContent = 0;
+            document.getElementById('speed').textContent = 1;
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+        }
+
+        setInterval(gameLoop, 16);
+        draw();
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dò Mìn</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 20px; }
+        .info {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(10, 30px);
+            gap: 2px;
+            background: #ccc;
+            padding: 2px;
+            border-radius: 5px;
+            margin: 20px auto;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            background: #ddd;
+            border: 1px solid #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+        }
+        .cell.revealed {
+            background: #fff;
+            cursor: default;
+        }
+        .cell.mine { background: #f00; color: white; }
+        .cell.flagged { background: #ff0; }
+        .cell.number-1 { color: #00f; }
+        .cell.number-2 { color: #008000; }
+        .cell.number-3 { color: #f00; }
+        .cell.number-4 { color: #800080; }
+        .cell.number-5 { color: #800000; }
+        .cell.number-6 { color: #008080; }
+        .cell.number-7 { color: #000; }
+        .cell.number-8 { color: #808080; }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #5568d3; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>💣 Dò Mìn</h1>
+        <div class="info">
+            <div>Mìn: <span id="mines">10</span></div>
+            <div>Đã đánh dấu: <span id="flagged">0</span></div>
+        </div>
+        <div class="board" id="board"></div>
+        <div style="margin: 15px 0; font-size: 14px; color: #666;">
+            <p>Click trái để mở, Click phải để đánh dấu</p>
+        </div>
+        <button onclick="resetGame()">Chơi Lại</button>
+    </div>
+    <script>
+        const rows = 10;
+        const cols = 10;
+        const mines = 10;
+        let board = [];
+        let revealed = [];
+        let flagged = [];
+        let gameOver = false;
+
+        function initGame() {
+            board = Array(rows).fill().map(() => Array(cols).fill(0));
+            revealed = Array(rows).fill().map(() => Array(cols).fill(false));
+            flagged = Array(rows).fill().map(() => Array(cols).fill(false));
+            gameOver = false;
+
+            let placed = 0;
+            while (placed < mines) {
+                const row = Math.floor(Math.random() * rows);
+                const col = Math.floor(Math.random() * cols);
+                if (board[row][col] !== -1) {
+                    board[row][col] = -1;
+                    placed++;
+                }
+            }
+
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    if (board[i][j] !== -1) {
+                        let count = 0;
+                        for (let di = -1; di <= 1; di++) {
+                            for (let dj = -1; dj <= 1; dj++) {
+                                if (i + di >= 0 && i + di < rows && j + dj >= 0 && j + dj < cols) {
+                                    if (board[i + di][j + dj] === -1) count++;
+                                }
+                            }
+                        }
+                        board[i][j] = count;
+                    }
+                }
+            }
+
+            render();
+        }
+
+        function render() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            let flaggedCount = 0;
+
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+
+                    if (flagged[i][j]) {
+                        cell.textContent = '🚩';
+                        cell.classList.add('flagged');
+                        flaggedCount++;
+                    } else if (revealed[i][j]) {
+                        cell.classList.add('revealed');
+                        if (board[i][j] === -1) {
+                            cell.textContent = '💣';
+                            cell.classList.add('mine');
+                        } else if (board[i][j] > 0) {
+                            cell.textContent = board[i][j];
+                            cell.classList.add(`number-${board[i][j]}`);
+                        }
+                    }
+
+                    cell.addEventListener('click', (e) => {
+                        if (e.button === 0) reveal(i, j);
+                    });
+                    cell.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        toggleFlag(i, j);
+                    });
+
+                    boardEl.appendChild(cell);
+                }
+            }
+
+            document.getElementById('flagged').textContent = flaggedCount;
+        }
+
+        function reveal(row, col) {
+            if (gameOver || revealed[row][col] || flagged[row][col]) return;
+
+            revealed[row][col] = true;
+
+            if (board[row][col] === -1) {
+                gameOver = true;
+                alert('Boom! Game Over!');
+                revealAll();
+                return;
+            }
+
+            if (board[row][col] === 0) {
+                for (let di = -1; di <= 1; di++) {
+                    for (let dj = -1; dj <= 1; dj++) {
+                        if (row + di >= 0 && row + di < rows && col + dj >= 0 && col + dj < cols) {
+                            if (!revealed[row + di][col + dj] && !flagged[row + di][col + dj]) {
+                                reveal(row + di, col + dj);
+                            }
+                        }
+                    }
+                }
+            }
+
+            render();
+            checkWin();
+        }
+
+        function toggleFlag(row, col) {
+            if (gameOver || revealed[row][col]) return;
+            flagged[row][col] = !flagged[row][col];
+            render();
+        }
+
+        function revealAll() {
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    revealed[i][j] = true;
+                }
+            }
+            render();
+        }
+
+        function checkWin() {
+            let revealedCount = 0;
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    if (revealed[i][j]) revealedCount++;
+                }
+            }
+            if (revealedCount === rows * cols - mines) {
+                alert('Chúc mừng! Bạn đã thắng!');
+                gameOver = true;
+            }
+        }
+
+        function resetGame() {
+            initGame();
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
+

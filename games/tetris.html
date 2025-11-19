@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 15px; }
+        .info {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        canvas {
+            border: 3px solid #333;
+            border-radius: 10px;
+            background: #000;
+        }
+        .controls {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #5568d3; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎮 Tetris</h1>
+        <div class="info">
+            <div>Điểm: <span id="score">0</span></div>
+            <div>Cấp: <span id="level">1</span></div>
+        </div>
+        <canvas id="gameCanvas" width="300" height="600"></canvas>
+        <div class="controls">
+            <p>Mũi tên trái/phải: di chuyển, Mũi tên xuống: rơi nhanh, Mũi tên lên: xoay</p>
+        </div>
+        <button onclick="resetGame()">Chơi Lại</button>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+        let board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+        let currentPiece = null;
+        let score = 0;
+        let level = 1;
+        let dropTime = 0;
+        let lastTime = 0;
+
+        const pieces = [
+            [[1,1,1,1]],
+            [[1,1],[1,1]],
+            [[0,1,0],[1,1,1]],
+            [[0,1,1],[1,1,0]],
+            [[1,1,0],[0,1,1]],
+            [[1,0,0],[1,1,1]],
+            [[0,0,1],[1,1,1]]
+        ];
+
+        function createPiece() {
+            const type = Math.floor(Math.random() * pieces.length);
+            return {
+                matrix: pieces[type],
+                x: Math.floor(COLS / 2) - 1,
+                y: 0
+            };
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            board.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        ctx.fillStyle = `hsl(${value * 50}, 70%, 50%)`;
+                        ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+                    }
+                });
+            });
+
+            if (currentPiece) {
+                currentPiece.matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value) {
+                            ctx.fillStyle = '#fff';
+                            ctx.fillRect(
+                                (currentPiece.x + x) * BLOCK_SIZE,
+                                (currentPiece.y + y) * BLOCK_SIZE,
+                                BLOCK_SIZE - 1,
+                                BLOCK_SIZE - 1
+                            );
+                        }
+                    });
+                });
+            }
+        }
+
+        function collide(piece, dx, dy) {
+            return piece.matrix.some((row, y) => 
+                row.some((value, x) => {
+                    if (!value) return false;
+                    const newX = piece.x + x + dx;
+                    const newY = piece.y + y + dy;
+                    return newX < 0 || newX >= COLS || newY >= ROWS || 
+                           (newY >= 0 && board[newY][newX]);
+                })
+            );
+        }
+
+        function merge() {
+            currentPiece.matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value) {
+                        board[currentPiece.y + y][currentPiece.x + x] = level;
+                    }
+                });
+            });
+        }
+
+        function clearLines() {
+            let lines = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (board[y].every(cell => cell !== 0)) {
+                    board.splice(y, 1);
+                    board.unshift(Array(COLS).fill(0));
+                    lines++;
+                    y++;
+                }
+            }
+            if (lines > 0) {
+                score += lines * 100 * level;
+                level = Math.floor(score / 1000) + 1;
+                document.getElementById('score').textContent = score;
+                document.getElementById('level').textContent = level;
+            }
+        }
+
+        function drop() {
+            if (!collide(currentPiece, 0, 1)) {
+                currentPiece.y++;
+            } else {
+                merge();
+                clearLines();
+                currentPiece = createPiece();
+                if (collide(currentPiece, 0, 0)) {
+                    alert('Game Over! Điểm: ' + score);
+                    resetGame();
+                }
+            }
+        }
+
+        function rotate() {
+            const rotated = currentPiece.matrix[0].map((_, i) =>
+                currentPiece.matrix.map(row => row[i]).reverse()
+            );
+            const original = currentPiece.matrix;
+            currentPiece.matrix = rotated;
+            if (collide(currentPiece, 0, 0)) {
+                currentPiece.matrix = original;
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!currentPiece) return;
+            if (e.key === 'ArrowLeft' && !collide(currentPiece, -1, 0)) currentPiece.x--;
+            if (e.key === 'ArrowRight' && !collide(currentPiece, 1, 0)) currentPiece.x++;
+            if (e.key === 'ArrowDown') drop();
+            if (e.key === 'ArrowUp') rotate();
+        });
+
+        function update(time = 0) {
+            const deltaTime = time - lastTime;
+            lastTime = time;
+            dropTime += deltaTime;
+            if (dropTime > 1000 - level * 50) {
+                drop();
+                dropTime = 0;
+            }
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        function resetGame() {
+            board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+            currentPiece = createPiece();
+            score = 0;
+            level = 1;
+            dropTime = 0;
+            document.getElementById('score').textContent = 0;
+            document.getElementById('level').textContent = 1;
+        }
+
+        resetGame();
+        update();
+    </script>
+</body>
+</html>
+

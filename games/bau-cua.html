@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bầu Cua</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 20px;
+        }
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 600px;
+        }
+        h1 { color: #333; margin-bottom: 20px; }
+        .dice-container {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            gap: 20px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        .dice {
+            width: 100px;
+            height: 100px;
+            border: 3px solid #333;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            background: #fff;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .bet-area {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .bet-item {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 40px;
+        }
+        .bet-item:hover { border-color: #f5576c; transform: scale(1.05); }
+        .bet-item.selected { background: #f5576c; color: white; border-color: #f5576c; }
+        .bet-item.bet { background: #ffd700; }
+        .info {
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background: #f5576c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #e04459; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎲 Bầu Cua</h1>
+        <div class="info">
+            <div>Tiền: <span id="money">1000</span> xu</div>
+            <div>Đặt cược: <span id="bet">0</span> xu</div>
+        </div>
+        <div class="dice-container" id="dice-container"></div>
+        <div class="bet-area" id="bet-area"></div>
+        <div>
+            <button onclick="rollDice()" id="roll-btn">Lắc Xúc Xắc</button>
+            <button onclick="resetGame()">Chơi Lại</button>
+        </div>
+    </div>
+    <script>
+        const symbols = ['🦀', '🦐', '🐟', '🦞', '🐔', '🦌'];
+        let money = 1000;
+        let bets = {};
+        let selectedSymbol = null;
+
+        function initGame() {
+            const betArea = document.getElementById('bet-area');
+            betArea.innerHTML = '';
+            symbols.forEach((sym, idx) => {
+                const item = document.createElement('div');
+                item.className = 'bet-item';
+                item.textContent = sym;
+                item.onclick = () => selectSymbol(idx);
+                betArea.appendChild(item);
+            });
+            updateInfo();
+        }
+
+        function selectSymbol(idx) {
+            if (money <= 0) return;
+            const items = document.querySelectorAll('.bet-item');
+            items.forEach((item, i) => {
+                item.classList.remove('selected');
+                if (i === idx) {
+                    item.classList.add('selected');
+                    selectedSymbol = idx;
+                }
+            });
+        }
+
+        function rollDice() {
+            if (money <= 0 || !selectedSymbol) {
+                alert('Chọn một con để đặt cược!');
+                return;
+            }
+            if (money < 100) {
+                alert('Không đủ tiền!');
+                return;
+            }
+            money -= 100;
+            bets[selectedSymbol] = (bets[selectedSymbol] || 0) + 100;
+            const diceContainer = document.getElementById('dice-container');
+            diceContainer.innerHTML = '';
+            const results = [];
+            for (let i = 0; i < 3; i++) {
+                const result = Math.floor(Math.random() * symbols.length);
+                results.push(result);
+                const dice = document.createElement('div');
+                dice.className = 'dice';
+                dice.textContent = symbols[result];
+                diceContainer.appendChild(dice);
+            }
+            let win = 0;
+            results.forEach(r => {
+                if (r === selectedSymbol) win += 200;
+            });
+            money += win;
+            if (win > 0) {
+                alert(`Thắng ${win} xu!`);
+            } else {
+                alert('Thua!');
+            }
+            bets = {};
+            selectedSymbol = null;
+            document.querySelectorAll('.bet-item').forEach(item => {
+                item.classList.remove('selected', 'bet');
+            });
+            updateInfo();
+            if (money <= 0) {
+                document.getElementById('roll-btn').disabled = true;
+                alert('Hết tiền! Game Over!');
+            }
+        }
+
+        function updateInfo() {
+            document.getElementById('money').textContent = money;
+            document.getElementById('bet').textContent = Object.values(bets).reduce((a, b) => a + b, 0);
+        }
+
+        function resetGame() {
+            money = 1000;
+            bets = {};
+            selectedSymbol = null;
+            document.getElementById('roll-btn').disabled = false;
+            document.getElementById('dice-container').innerHTML = '';
+            initGame();
+        }
+
+        initGame();
+    </script>
+</body>
+</html>
+
